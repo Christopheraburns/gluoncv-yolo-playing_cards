@@ -2,8 +2,8 @@
 import subprocess
 import sys
 
-subprocess.call([sys.executable, "-m", "pip", "install", 'boto3'])
-subprocess.call([sys.executable, "-m", "pip", "install", 'gluoncv', '--pre', '--upgrade'])
+#subprocess.call([sys.executable, "-m", "pip", "install", 'boto3'])
+#subprocess.call([sys.executable, "-m", "pip", "install", 'gluoncv', '--pre', '--upgrade'])
 
 import argparse
 import os
@@ -32,7 +32,6 @@ from gluoncv.utils.metrics.coco_detection import COCODetectionMetric
 from gluoncv.utils import LRScheduler, LRSequential
 from gluoncv.data import VOCDetection
 s3 = boto3.resource('s3')
-import sagemaker
 
 # print(gcv.__version__)
 # print(os.listdir('/opt/ml/input/data/train'))
@@ -46,88 +45,13 @@ class VOCLike(VOCDetection):
     CLASSES = ["ac", "2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "10c", "jc", "qc", "kc", "ad", "2d", "3d", "4d", "5d", "6d", "7d", "8d", "9d", "10d", "jd", "qd", "kd", "ah", "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "10h", "jh", "qh", "kh", "as", "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "10s", "js", "qs", "ks"]
     def __init__(self, root, splits, transform=None, index_map=None, preload_label=True):
         super(VOCLike, self).__init__(root, splits, transform, index_map, preload_label)
-        
-class CWEvalMetrics():
-    def __init__(self, region='us-east-1', model_name='gluoncv-yolo'):
-        self.region = region
-        self.model_name = model_name
-        
-    def CW_eval(self, model_name, is_training, obj_loss, bcenter_loss, bscale_loss, class_loss, epoch, m_ap=0):
-        object_loss = obj_loss
-        box_center_loss = bcenter_loss
-        box_scale_loss = bscale_loss
-        class_loss = class_loss
-        mAP = m_ap
-        if is_training:
-            metric_type = 'Training'
-        else:
-            metric_type = 'Validation'
-                                
-        epochs = str(epoch)
-            
-        client = boto3.client('cloudwatch')
-        response = client.put_metric_data(
-            Namespace='/aws/sagemaker/' + model_name,
-            MetricData=[
-                {
-                    'MetricName': metric_type + ' object_loss',
-                    'Dimensions':[
-                        {'Name': 'Model Name', 'Value': model_name},
-                        {'Name': 'Epochs', 'Value': epochs},
-                    ],
-                    'Value': object_loss,
-                    'Unit': "Float",
-                    'StorageResolution': 1
-                },
-                {
-                    'MetricName': metric_type + ' box_center_loss',
-                    'Dimensions':[
-                        {'Name': 'Model Name', 'Value': model_name},
-                        {'Name': 'Epochs', 'Value': epochs},
-                    ],
-                    'Value': box_center_loss,
-                    'Unit': "Float",
-                    'StorageResolution': 1
-                },
-                {
-                    'MetricName': metric_type + ' box_scale_loss',
-                    'Dimensions':[
-                        {'Name': 'Model Name', 'Value': model_name},
-                        {'Name': 'Epochs', 'Value': epochs},
-                    ],
-                    'Value': box_scale_loss,
-                    'Unit': "Float",
-                    'StorageResolution': 1
-                },
-                {
-                    'MetricName': metric_type + ' class_loss',
-                    'Dimensions':[
-                        {'Name': 'Model Name', 'Value': model_name},
-                        {'Name': 'Epochs', 'Value': epochs},
-                    ],
-                    'Value': class_loss,
-                    'Unit': "Float",
-                    'StorageResolution': 1
-                },
-                {
-                    'MetricName': metric_type + ' mAP',
-                    'Dimensions':[
-                        {'Name': 'Model Name', 'Value': model_name},
-                        {'Name': 'Epochs', 'Value': epochs},
-                    ],
-                    'Value': mAP,
-                    'Unit': "Float",
-                    'StorageResolution': 1
-                },
-            ]
-        )
-        return response
-                                
 
 def get_dataset(dataset, args):
     if dataset.lower() == 'voc':
-        train_dataset = VOCLike(root='/opt/ml/input/data/training', splits=((2019, 'train'),))
-        val_dataset = VOCLike(root='/opt/ml/input/data/training', splits=((2018, 'val'),))
+        #train_dataset = VOCLike(root='/opt/ml/input/data/training', splits=((2019, 'train'),))
+        #val_dataset = VOCLike(root='/opt/ml/input/data/training', splits=((2018, 'val'),))
+        train_dataset = VOCLike(root='~/code/gluoncv-yolo-playing_cards/VOCTemplate', splits=((2019, 'train'),))
+        val_dataset = VOCLike(root='~/code/gluoncv-yolo-playing_cards/VOCTemplate', splits=((2018, 'val'),))
         val_metric = VOC07MApMetric(iou_thresh=0.5, class_names=val_dataset.classes)
     elif dataset.lower() == 'coco':
         train_dataset = gdata.COCODetection(splits='instances_train2017', use_crowd=False)
@@ -318,7 +242,6 @@ def train_job(net, train_data, val_data, eval_metric, ctx, args):
         name4, loss4 = cls_metrics.get()
         logger.info('[Epoch {}] Training cost: {:.3f}, {}={:.3f}, {}={:.3f}, {}={:.3f}, {}={:.3f}'.format(
             epoch, (time.time()-tic), name1, loss1, name2, loss2, name3, loss3, name4, loss4))
-
         if not (epoch + 1) % args.val_interval:
             # consider reduce the frequency of validation to save time
             map_name, mean_ap = validate(net, val_data, ctx, eval_metric)
@@ -327,8 +250,6 @@ def train_job(net, train_data, val_data, eval_metric, ctx, args):
             current_map = float(mean_ap[-1])
         else:
             current_map = 0.
-
-        CWMetrics.CW_eval("yolov3-darknet53-custom", is_training=True, obj_loss=loss1, bcenter_loss=loss2, bscale_loss=loss3, class_loss=loss4, m_ap=current_map)
         save_params(net, best_map, current_map, epoch, args.save_interval, args.save_prefix)
         
         
@@ -402,7 +323,7 @@ if __name__ =='__main__':
     parser.add_argument('--data-shape', type=int, default=416,
                         help="Input data shape for evaluation, use 320, 416, 608... " +
                              "Training is with random shapes from (320 to 608).")
-    parser.add_argument('--batch-size', type=int, default=64,
+    parser.add_argument('--batch-size', type=int, default=16,
                         help='Training mini-batch size')
     parser.add_argument('--dataset', type=str, default='voc',
                         help='Training dataset. Now support voc.')
@@ -411,7 +332,7 @@ if __name__ =='__main__':
                         'number to accelerate data loading, if you CPU and GPUs are powerful.')
     parser.add_argument('--gpus', type=str, default=0,
                         help='Training with GPUs, you can specify 1,3 for example.')
-    parser.add_argument('--epochs', type=int, default=200,
+    parser.add_argument('--epochs', type=int, default=1,
                         help='Training epochs.')
     parser.add_argument('--resume', type=str, default='',
                         help='Resume from previously saved parameters if not None. '
@@ -462,22 +383,20 @@ if __name__ =='__main__':
     parser.add_argument('--no-mixup-epochs', type=int, default=20,
                         help='Disable mixup training if enabled in the last N epochs.')
     parser.add_argument('--label-smooth', action='store_true', help='Use label smoothing.')
-    parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
-    parser.add_argument('--model-file', type=str, default='s3://gluoncv-training/file.model.param')
+    #parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
+    #parser.add_argument('--model-file', type=str, default='s3://gluoncv-training/file.model.param')
     args = parser.parse_args()
-                                
-   
 
     # fix seed for mxnet, numpy and python builtin random generator.
     gutils.random.seed(args.seed)
 
     # training contexts
-    ctx = [mx.gpu(i) for i in range(int(os.environ['SM_NUM_GPUS']))] if int(os.environ['SM_NUM_GPUS']) > 0 else [mx.cpu()]
+    #ctx = [mx.gpu(i) for i in range(int(os.environ['SM_NUM_GPUS']))] if int(os.environ['SM_NUM_GPUS']) > 0 else [mx.cpu()]
+    ctx = [mx.gpu(0)]
 
     # network
     net_name = '_'.join(('yolo3', args.network, 'custom'))
     args.save_prefix += net_name
-    CWMetrics = CWEvalMetrics(region="us-east-1", model_name=net_name)
     # use sync bn if specified
     if args.syncbn and len(ctx) > 1:
         net = get_model(net_name, classes=num_classes, pretrained_base=True, norm_layer=gluon.contrib.nn.SyncBatchNorm,

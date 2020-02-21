@@ -1,0 +1,16 @@
+{
+    "CompilationJobName": "yobile_local",
+    "RoleArn": "arn:aws:iam::056149205531:role/service-role/AmazonSageMaker-ExecutionRole-20171215T112578",
+    "InputConfig": {
+        "S3Uri": "s3://yolov3-mobilenet/model.tar.gz",
+        "DataInputConfig": "{\"data\": [1, 3, 608, 608]}",
+        "Framework": "MXNET"
+    },
+    "OutputConfig": {
+        "S3OutputLocation": "s3://yolov3-mobilenet/output/",
+        "TargetDevice": "jetson_nano"
+    },
+    "StoppingCondition": {
+        "MaxRuntimeInSeconds": 300
+    }
+}

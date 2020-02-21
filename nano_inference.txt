@@ -1,0 +1,49 @@
+from jetcam.usb_camera import USBCamera
+camera = USBCamera(width=608, height=608, capture_width=640, capture_height=480, capture_device=0)
+image = camera.read()
+print(image.shape)
+
+
+import time
+import datetime
+import numpy as np
+import cv2
+from dlr import DLRModel
+
+dlr_model=DLRModel(('/home/aws/model'), 'gpu')
+
+def flatten(img):
+    img = np.transpose(img, (2,1,0))
+    img = np.expand_dims(img, axis=0)
+    return img
+
+image = camera.read()
+
+flattened = flatten(image)
+
+print (flattened.shape)
+
+def predict(flattenedimage):
+    prediction_scores = dlr_model.run({'data' : flattenedimage})
+    return prediction_scores
+
+print(datetime.datetime.now().time())
+
+probs = predict(flattened)
+#print(probs)
+print(datetime.datetime.now().time())
+print("FinishedIter")
+
+
+
+
+probs = predict(flattened)
+#print(probs)
+print(datetime.datetime.now().time())
+print("FinishedIter")
+
+
+probs = predict(flattened)
+#print(probs)
+print(datetime.datetime.now().time())
+print("FinishedIter")
